@@ -20,15 +20,20 @@ interface CustomerDetail {
 }
 
 export default function CustomerDetailPage() {
-  const customerId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("id") : null;
-  const customerId = params.get("id");
+  const [customerId, setCustomerId] = useState<string | null>(null);
   const [data, setData] = useState<CustomerDetail | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [reminderMsg, setReminderMsg] = useState<string | null>(null);
 
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("id");
+    setCustomerId(id);
+  }, []);
+
   function load() {
+    if (!customerId) return;
     api.get<CustomerDetail>(`/api/customers/${customerId}`).then(setData);
   }
 

@@ -29,11 +29,16 @@ interface InvoiceData {
 }
 
 export default function InvoicePage() {
-  const saleId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("id") : null;
-  const saleId = params.get("id");
+  const [saleId, setSaleId] = useState<string | null>(null);
   const [data, setData] = useState<InvoiceData | null>(null);
 
   useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("id");
+    setSaleId(id);
+  }, []);
+
+  useEffect(() => {
+    if (!saleId) return;
     api.get<InvoiceData>(`/api/sales/${saleId}`).then(setData);
   }, [saleId]);
 
