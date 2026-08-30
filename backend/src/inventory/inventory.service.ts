@@ -1,0 +1,7 @@
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+@Injectable() export class InventoryService { constructor(private readonly prisma:PrismaService){}
+ list(businessId:string){return this.prisma.inventory.findMany({where:{businessId},include:{product:true},orderBy:{updatedAt:'desc'}})}
+ async adjust(businessId:string,d:any){const qty=Number(d.quantity); if(!qty||qty<0) throw new BadRequestException('quantity must be positive'); const type=d.direction==='OUT'?'ADJUSTMENT_OUT':'ADJUSTMENT_IN'; return this.prisma.$transaction(async tx=>{const p=await tx.product.findFirst({where:{id:d.productId,businessId}}); if(!p) throw new NotFoundException('Product not found'); const inv=await tx.inventory.findUnique({where:{productId:p.id}}); const current=Number(inv?.quantity||0); const next=type==='ADJUSTMENT_OUT'?current-qty:current+qty; if(next<0) throw new BadRequestException('Insufficient stock'); await tx.inventory.upsert({where:{productId:p.id},update:{quantity:next},create:{businessId,productId:p.id,quantity:next}}); const move=await tx.stockMovement.create({data:{businessId,productId:p.id,type,quantity:qty,notes:d.notes}}); return {inventory:next,movement:move};})}
+ async lowStock(businessId:string){const rows=await this.prisma.inventory.findMany({where:{businessId},include:{product:true}}); return rows.filter(r=>Number(r.quantity)<=Number(r.minStock));}
+}

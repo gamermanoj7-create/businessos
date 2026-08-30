@@ -1,0 +1,6 @@
+import { Injectable,NotFoundException } from '@nestjs/common'; import { PrismaService } from '../prisma/prisma.service';
+@Injectable() export class FinanceService{constructor(private readonly prisma:PrismaService){}
+ list(b:string,from?:string,to?:string){return this.prisma.expense.findMany({where:{businessId:b,...(from||to?{expenseDate:{...(from?{gte:new Date(from)}:{}),...(to?{lte:new Date(to)}:{})}}:{})},orderBy:{expenseDate:'desc'}})}
+ async create(b:string,d:any){const e=await this.prisma.expense.create({data:{businessId:b,category:d.category,description:d.description,amount:d.amount,paymentMethod:d.paymentMethod||'CASH',expenseDate:d.expenseDate?new Date(d.expenseDate):new Date()}});await this.prisma.cashEntry.create({data:{businessId:b,direction:'OUTGOING',amount:d.amount,source:'EXPENSE',referenceId:e.id}});return e}
+ async update(b:string,id:string,d:any){const x=await this.prisma.expense.findFirst({where:{id,businessId:b}});if(!x)throw new NotFoundException('Expense not found');return this.prisma.expense.update({where:{id},data:{category:d.category,description:d.description,amount:d.amount,paymentMethod:d.paymentMethod,expenseDate:d.expenseDate?new Date(d.expenseDate):undefined}})}
+}
