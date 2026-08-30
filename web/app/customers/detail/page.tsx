@@ -1,7 +1,7 @@
 "use client";
+import { useSearchParams } from "next/navigation";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 
 interface CustomerDetail {
@@ -21,7 +21,8 @@ interface CustomerDetail {
 }
 
 export default function CustomerDetailPage() {
-  const params = useParams<{ id: string }>();
+  const params = useSearchParams();
+  const customerId = params.get("id");
   const [data, setData] = useState<CustomerDetail | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -29,10 +30,10 @@ export default function CustomerDetailPage() {
   const [reminderMsg, setReminderMsg] = useState<string | null>(null);
 
   function load() {
-    api.get<CustomerDetail>(`/api/customers/${params.id}`).then(setData);
+    api.get<CustomerDetail>(`/api/customers/${customerId}`).then(setData);
   }
 
-  useEffect(load, [params.id]);
+  useEffect(load, [customerId]);
 
   async function handleReceivePayment() {
     setError(null);
@@ -43,7 +44,7 @@ export default function CustomerDetailPage() {
     }
     setSaving(true);
     try {
-      await api.post(`/api/customers/${params.id}/payments`, { amount, method: "cash" });
+      await api.post(`/api/customers/${customerId}/payments`, { amount, method: "cash" });
       setPaymentAmount("");
       load();
     } catch (e) {
@@ -54,14 +55,14 @@ export default function CustomerDetailPage() {
   }
 
   async function toggleReminder(enabled: boolean) {
-    await api.put(`/api/customers/${params.id}`, { reminder_enabled: enabled });
+    await api.put(`/api/customers/${customerId}`, { reminder_enabled: enabled });
     load();
   }
 
   async function sendReminderNow() {
     setReminderMsg(null);
     try {
-      const res = await api.post<{ sent: boolean; message_id?: string; error?: string }>(`/api/whatsapp/send-now/${params.id}`);
+      const res = await api.post<{ sent: boolean; message_id?: string; error?: string }>(`/api/whatsapp/send-now/${customerId}`);
       setReminderMsg(res.sent ? "Reminder sent via WhatsApp." : `Not sent: ${res.error}`);
     } catch (e) {
       setReminderMsg(e instanceof ApiError ? e.message : "Could not send reminder");

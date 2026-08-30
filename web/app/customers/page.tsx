@@ -75,7 +75,7 @@ export default function CustomersPage() {
 
       <div className="space-y-2">
         {customers.map((c) => (
-          <Link href={`/customers/${c.id}`} key={c.id} className="card flex items-center justify-between block">
+          <Link href={`/customers/detail?id=${c.id}`} key={c.id} className="card flex items-center justify-between block">
             <div>
               <div className="font-medium">{c.name}</div>
               {c.phone && <div className="text-xs text-slate-400">{c.phone}</div>}
