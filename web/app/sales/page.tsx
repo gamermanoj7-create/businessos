@@ -31,7 +31,7 @@ export default function SalesPage() {
 
       <div className="space-y-2">
         {sales.map((s) => (
-          <Link href={`/sales/${s.id}`} key={s.id} className="card flex items-center justify-between block">
+          <Link href={`/sales/detail?id=${s.id}`} key={s.id} className="card flex items-center justify-between block">
             <div>
               <div className="font-medium">{s.customers?.name || "Walk-in customer"}</div>
               <div className="text-xs text-slate-400">

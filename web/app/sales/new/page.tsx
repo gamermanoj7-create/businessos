@@ -73,7 +73,7 @@ export default function NewSalePage() {
         tax_enabled: taxEnabled,
         paid_amount: paidNum,
       });
-      router.push(`/sales/${res.sale.id}`);
+      router.push(`/sales/detail?id=${res.sale.id}`);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Could not save this sale");
     } finally {

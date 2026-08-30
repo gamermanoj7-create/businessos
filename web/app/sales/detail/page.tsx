@@ -1,7 +1,8 @@
 "use client";
+import { useSearchParams } from "next/navigation";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+
 import { api } from "@/lib/api";
 
 interface InvoiceItem {
@@ -29,12 +30,13 @@ interface InvoiceData {
 }
 
 export default function InvoicePage() {
-  const params = useParams<{ id: string }>();
+  const params = useSearchParams();
+  const saleId = params.get("id");
   const [data, setData] = useState<InvoiceData | null>(null);
 
   useEffect(() => {
-    api.get<InvoiceData>(`/api/sales/${params.id}`).then(setData);
-  }, [params.id]);
+    api.get<InvoiceData>(`/api/sales/${saleId}`).then(setData);
+  }, [saleId]);
 
   if (!data) return <div className="p-4 text-slate-400 text-sm">Loading...</div>;
 
