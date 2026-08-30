@@ -1,38 +1,60 @@
-import { jwtVerify } from "jose";
+import { jwtVerify, createRemoteJWKSet } from "jose";
 import type { Context, Next } from "hono";
 import type { Env, Variables } from "../types";
 import { createUserClient } from "./supabase";
 
-/**
- * Verifies the Supabase-issued JWT from the Authorization header, resolves
- * which business the user belongs to via business_users, and stores both
- * on the request context. Every downstream route reads business_id from
- * here — never from a client-supplied field — so a user can never pass a
- * different business_id and read someone else's data.
- */
 export async function requireAuth(
   c: Context<{ Bindings: Env; Variables: Variables }>,
   next: Next
 ) {
   const authHeader = c.req.header("Authorization") || "";
-  const token = authHeader.replace(/^Bearer\s+/i, "");
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+
   if (!token) {
     return c.json({ error: "Missing Authorization header" }, 401);
   }
 
   let userId: string;
+
   try {
-    const secret = new TextEncoder().encode(c.env.SUPABASE_JWT_SECRET);
-    const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
-    if (!payload.sub) throw new Error("no sub claim");
+    const supabaseUrl = c.env.SUPABASE_URL.replace(/\/$/, "");
+
+    // Supabase current signing-key endpoint.
+    const JWKS = createRemoteJWKSet(
+      new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`)
+    );
+
+    let payload;
+
+    try {
+      // Current Supabase asymmetric JWT verification.
+      const result = await jwtVerify(token, JWKS, {
+        issuer: `${supabaseUrl}/auth/v1`,
+      });
+      payload = result.payload;
+    } catch {
+      // Backward compatibility for older HS256 Supabase projects.
+      const secret = new TextEncoder().encode(c.env.SUPABASE_JWT_SECRET);
+
+      const result = await jwtVerify(token, secret, {
+        algorithms: ["HS256"],
+      });
+
+      payload = result.payload;
+    }
+
+    if (!payload.sub) {
+      throw new Error("JWT has no user id");
+    }
+
     userId = payload.sub;
-  } catch {
+  } catch (error) {
+    console.error("JWT verification failed:", error);
     return c.json({ error: "Invalid or expired token" }, 401);
   }
 
-  // Resolve business membership via the user's own token (RLS-safe: a user
-  // can only ever select their own business_users row).
   const supabase = createUserClient(c.env, token);
+
   const { data, error } = await supabase
     .from("business_users")
     .select("business_id, role")
@@ -41,7 +63,10 @@ export async function requireAuth(
     .maybeSingle();
 
   if (error || !data) {
-    return c.json({ error: "No business is linked to this account yet" }, 403);
+    return c.json(
+      { error: "No business is linked to this account yet" },
+      403
+    );
   }
 
   c.set("auth", {
@@ -49,6 +74,7 @@ export async function requireAuth(
     businessId: data.business_id,
     role: data.role as "owner" | "staff",
   });
+
   c.set("accessToken", token);
 
   await next();
