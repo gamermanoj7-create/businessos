@@ -1,5 +1,4 @@
 "use client";
-import { useSearchParams } from "next/navigation";
 
 import { useEffect, useState } from "react";
 
@@ -30,7 +29,7 @@ interface InvoiceData {
 }
 
 export default function InvoicePage() {
-  const params = useSearchParams();
+  const saleId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("id") : null;
   const saleId = params.get("id");
   const [data, setData] = useState<InvoiceData | null>(null);
 

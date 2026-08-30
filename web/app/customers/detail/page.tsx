@@ -1,5 +1,4 @@
 "use client";
-import { useSearchParams } from "next/navigation";
 
 import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api";
@@ -21,7 +20,7 @@ interface CustomerDetail {
 }
 
 export default function CustomerDetailPage() {
-  const params = useSearchParams();
+  const customerId = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("id") : null;
   const customerId = params.get("id");
   const [data, setData] = useState<CustomerDetail | null>(null);
   const [paymentAmount, setPaymentAmount] = useState("");
